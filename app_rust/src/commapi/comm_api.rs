@@ -8,7 +8,7 @@ use std::{fmt::Formatter, result::Result};
 pub struct CanFrame {
     pub id: u32,
     pub dlc: u8,
-    data: [u8; 8],
+    pub data: [u8; 8],
 }
 
 impl CanFrame {
@@ -24,6 +24,9 @@ impl CanFrame {
             dlc: dlc as u8,
             data: can_data,
         }
+    }
+    pub fn newWithData(id: u32, dlc: u8, data: [u8; 8]) -> Self {
+        CanFrame {id, dlc, data}
     }
 }
 
