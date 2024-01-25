@@ -186,8 +186,8 @@ fn main() {
                     }
                     None => {// Okay for empty DID
                     }
-                    // Start UDS with service data
                 }
+                // Start UDS with service data
                 start_uds(to_hex(&service), to_hex(&did));
             }
             None => {
