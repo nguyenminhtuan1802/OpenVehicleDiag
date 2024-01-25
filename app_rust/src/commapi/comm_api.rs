@@ -269,7 +269,7 @@ pub trait ComServer: Send + Sync + Debug {
     /// The number of ISO-TP messages successfully written to the vehicle, if Timeout is 0, this
     /// number will always be equal to the number of frames that were provided.
     fn send_iso15765_data(
-        &self,
+        &mut self,
         data: &[ISO15765Data],
         timeout_ms: u32,
     ) -> Result<usize, ComServerError>;

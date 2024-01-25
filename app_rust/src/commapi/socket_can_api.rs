@@ -190,7 +190,7 @@ impl ComServer for SocketCanAPI {
     }
 
     fn send_iso15765_data(
-        &self,
+        &mut self,
         data: &[ISO15765Data],
         _timeout_ms: u32,
     ) -> Result<usize, ComServerError> {

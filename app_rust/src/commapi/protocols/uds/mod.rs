@@ -3,7 +3,7 @@ use super::{
     CautionLevel, CommandError, DiagCfg, ECUCommand, ProtocolError, ProtocolResult, ProtocolServer,
     Selectable, DTC,
 };
-use crate::commapi::{comm_api::{ComServer, FilterType}, iface::{InterfaceConfig, InterfaceType, IsoTPInterface, PayloadFlag}, protocols::DTCState};
+use crate::commapi::{comm_api::{ComServer, FilterType}, iface::{InterfaceConfig, InterfaceType, IsoTPInterface, PayloadFlag, IFACE_CFG}, protocols::DTCState};
 use std::sync::atomic::Ordering::Relaxed;
 use std::{
     sync::{
@@ -430,6 +430,145 @@ impl UDSECU {
     pub fn get_session_type(&self) -> DiagSession {
         *self.curr_session_type.read().unwrap()
     }
+
+    pub fn start_client_and_send_one_request(comm_server: &Box<dyn ComServer>,
+        interface_type: InterfaceType,
+        interface_cfg: InterfaceConfig,
+        tx_flags: Option<Vec<PayloadFlag>>,
+        diag_cfg: DiagCfg,
+        sid: &Vec<u8>,
+        did: &Vec<u8>,)
+    {
+        if interface_type != InterfaceType::IsoTp {
+            return;
+        }
+
+        let mut interface = IsoTPInterface::new(comm_server.clone_box()).unwrap();
+
+        interface.setup(&interface_cfg);
+        interface.add_filter(FilterType::IsoTP {
+            id: diag_cfg.recv_id,
+            mask: 0xFFFF,
+            fc: diag_cfg.send_id,
+        });
+
+        // Enter extended diagnostic session (Full features)
+        let s_id = interface_cfg.get_param(IFACE_CFG::SEND_ID).unwrap();
+
+        // Using extend
+        let mut combined_extend = sid.clone();
+        combined_extend.extend(did.iter());
+
+        let res = Self::run_command_resp(
+            &mut interface,
+            &tx_flags,
+            s_id,
+            0x01,
+            &combined_extend,
+            true,
+        );
+        match res {
+            Ok(data) => {
+                if !data.is_empty() {
+                    println!("Data: {:?}", data);
+                } else {
+                    println!("data empty");
+                }
+            }
+            Err(err) => {}
+        }
+    }
+
+    pub fn start_diag_session_test(
+        comm_server: &Box<dyn ComServer>,
+        interface_type: InterfaceType,
+        interface_cfg: InterfaceConfig,
+        tx_flags: Option<Vec<PayloadFlag>>,
+        diag_cfg: DiagCfg,
+    )
+    {
+        if interface_type != InterfaceType::IsoTp {
+            return;
+        }
+
+        let mut interface = IsoTPInterface::new(comm_server.clone_box()).unwrap();
+
+        interface.setup(&interface_cfg);
+        interface.add_filter(FilterType::IsoTP {
+            id: diag_cfg.recv_id,
+            mask: 0xFFFF,
+            fc: diag_cfg.send_id,
+        });
+
+        let should_run = Arc::new(AtomicBool::new(true));
+        let should_run_t = should_run.clone();
+
+        let last_error = Arc::new(RwLock::new(None));
+        let last_error_t = last_error.clone();
+
+        let (channel_tx_sender, channel_tx_receiver): (
+            Sender<(u8, Vec<u8>, bool)>,
+            Receiver<(u8, Vec<u8>, bool)>,
+        ) = mpsc::channel();
+        let (channel_rx_sender, channel_rx_receiver): (
+            Sender<ProtocolResult<Vec<u8>>>,
+            Receiver<ProtocolResult<Vec<u8>>>,
+        ) = mpsc::channel();
+
+        let session_type = Arc::new(RwLock::new(DiagSession::Default));
+        let session_type_t = session_type.clone();
+
+        // Enter extended diagnostic session (Full features)
+        let s_id = interface_cfg.get_param(IFACE_CFG::SEND_ID).unwrap();
+
+        let mut ecu = UDSECU {
+            should_run,
+            last_error,
+            cmd_tx: channel_tx_sender,
+            cmd_rx: Arc::new(channel_rx_receiver),
+            send_id: diag_cfg.send_id,
+            curr_session_type: session_type, // Assumed,
+            cmd_mutex: Arc::new(Mutex::new(())),
+        };
+
+        std::thread::spawn(move || {
+            println!("UDS Diag server start!");
+            let mut timer = Instant::now();
+            while should_run_t.load(Relaxed) {
+                let res = Self::run_command_resp(
+                    &mut interface,
+                    &tx_flags,
+                    s_id,
+                    0x01,
+                    &[0x11, 0x18],
+                    true,
+                );
+                match res {
+                    Ok(data) => {
+                        if !data.is_empty() {
+                            println!("Data: {:?}", data);
+                        } else {
+                            println!("data empty");
+                        }
+                    }
+                    Err(err) => {}
+                }
+                // if channel_rx_sender.send(res).is_err() {
+                //     *last_error_t.write().unwrap() =
+                //         Some(ProtocolError::CustomError("Sender channel died".into()));
+                //     break;
+                // }
+                println!("****FInish 1 loop********!");
+                std::thread::sleep(std::time::Duration::from_secs(10))
+            }
+            println!("UDS Diag server stop!");
+            let _res = interface.close();
+        });
+
+        while true{
+            let a = 2;
+        }
+    }
 }
 
 impl ProtocolServer for UDSECU {
@@ -504,7 +643,7 @@ impl ProtocolServer for UDSECU {
                         &tx_flags,
                         s_id,
                         UDSCommand::TesterPresent.into(),
-                        &[0x00],
+                        &[0x18],
                         true,
                     )
                     .is_err()
@@ -529,10 +668,11 @@ impl ProtocolServer for UDSECU {
             cmd_mutex: Arc::new(Mutex::new(())),
         };
 
-        if let Err(e) = ecu.set_diag_session_mode(DiagSession::Extended) {
-            ecu.should_run.store(false, Relaxed);
-            return Err(e);
-        }
+        // TODO: uncomment this
+        // if let Err(e) = ecu.set_diag_session_mode(DiagSession::Extended) {
+        //     ecu.should_run.store(false, Relaxed);
+        //     return Err(e);
+        // }
         Ok(ecu)
     }
 

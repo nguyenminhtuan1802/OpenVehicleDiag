@@ -87,7 +87,7 @@ impl ComServer for PassthruApi {
     }
 
     fn send_iso15765_data(
-        &self,
+        &mut self,
         data: &[ISO15765Data],
         timeout_ms: u32,
     ) -> Result<usize, ComServerError> {

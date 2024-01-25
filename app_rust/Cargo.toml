@@ -1,12 +1,12 @@
 [package]
-name = "openvehiclediag"
+name = "ION-Diagnostics"
 version = "1.0.5"
-description = "pen Vehicle Diagnostics (OVD) is a Rust-based open source vehicle ECU diagnostic platform."
+description = "ION Diagnostics"
 edition = "2018"
 
 [package.metadata.bundle]
 version = "0.6.0"
-authors = ["ashcon"]
+authors = ["nick"]
 edition = "2018"
 description = """
 Open Vehicle Diagnostics (OVD) is a Rust-based open source vehicle ECU diagnostic platform that makes use of the J2534-2 protocol.
@@ -36,6 +36,8 @@ hex = "0.4.2"
 image = "0.23.12"
 dialog = "0.3.0"
 backtrace = "0.3.59"
+clap = { version = "4.4.18", features = ["derive"] }
+colored = "2.0"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.8"
@@ -46,3 +48,7 @@ shellexpand = "2.0.0"
 [target.'cfg(target_os = "linux")'.dependencies]
 socketcan = "1.7.0"
 socketcan-isotp = "0.1.1"
+
+[[bin]]
+name = "ION_Diagnostics"
+path = "src/cli.rs"

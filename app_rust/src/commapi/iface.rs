@@ -5,7 +5,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use super::comm_api::{CanFrame, Capability, ComServer, ComServerError, FilterType, ISO15765Data};
+use super::comm_api::{CanFrame, Capability, ComServer, ComServerError, FilterType, ISO15765Data, ISO15765Config};
 
 pub type InterfaceResult<T> = std::result::Result<T, ComServerError>;
 
@@ -68,6 +68,18 @@ impl InterfaceConfig {
         }
     }
 
+    pub fn from_iso15765(config: ISO15765Config) -> Self {
+        let mut s = InterfaceConfig::new();
+        s.add_param(IFACE_CFG::BAUDRATE, config.baud);
+        s.add_param(IFACE_CFG::SEND_ID, config.send_id);
+        s.add_param(IFACE_CFG::RECV_ID, config.recv_id);
+        s.add_param(IFACE_CFG::ISOTP_BS, config.block_size);
+        s.add_param(IFACE_CFG::ISOTP_ST_MIN, config.sep_time);
+        s.add_param(IFACE_CFG::EXT_ISOTP_ADDR, config.use_ext_isotp as u32);
+        s.add_param(IFACE_CFG::EXT_CAN_ADDR, config.use_ext_can as u32);
+        s
+    }
+
     pub fn add_param(&mut self, param_name: IFACE_CFG, param_value: u32) {
         self.params.insert(param_name.to_string(), param_value);
     }
@@ -114,6 +126,7 @@ pub trait Interface: Send + Sync + Debug {
     ) -> InterfaceResult<InterfacePayload> {
         self.clear_buffer(BufferType::RX)?;
         self.send_data(&[request], write_timeout)?;
+        std::thread::sleep(std::time::Duration::from_millis(100));
         let res = self.recv_data(1, read_timeout)?;
         if res.is_empty() {
             return Err(ComServerError {
@@ -121,6 +134,7 @@ pub trait Interface: Send + Sync + Debug {
                 err_desc: "Timeout waiting".into(),
             });
         } else {
+            //println!("Receive something!");
             return Ok(res[0].clone());
         }
     }

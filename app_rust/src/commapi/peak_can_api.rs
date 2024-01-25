@@ -162,6 +162,9 @@ impl ComServer for PeakCanAPI
                 } else {
                     let canFrame = CanFrame::newWithData(can_data.ID, can_data.LEN, can_data.DATA);
                     res.push(canFrame);
+                    if res.len() == max_msgs {
+                        return Ok(res);
+                    }
                 }
             }
             return Ok(res);
@@ -174,14 +177,29 @@ impl ComServer for PeakCanAPI
     }
 
     fn send_iso15765_data(
-        &self,
+        &mut self,
         data: &[ISO15765Data],
         _timeout_ms: u32,
     ) -> Result<usize, ComServerError> {
-        Err(ComServerError {
-            err_code: 1,
-            err_desc: "Peak CAN Interface not supported!".into(),
-        })
+        // Err(ComServerError {
+        //     err_code: 1,
+        //     err_desc: "Peak CAN Interface not supported!".into(),
+        // })
+
+        let canFrame: Vec<CanFrame> = data
+            .iter()
+            .map(|t| CanFrame {
+                id: t.id,
+                data: {
+                    let mut array = [0u8; 8];
+                    let len = std::cmp::min(t.data.len(), array.len());
+                    array[..len].copy_from_slice(&t.data[..len]);
+                    array
+                },
+                dlc: std::cmp::min(t.data.len(), 8) as u8,
+            })
+            .collect();
+        return self.send_can_packets(&canFrame, _timeout_ms);
     }
 
     fn read_iso15765_packets(
@@ -189,9 +207,21 @@ impl ComServer for PeakCanAPI
         timeout_ms: u32,
         max_msgs: usize,
     ) -> Result<Vec<ISO15765Data>, ComServerError> {
-        Err(ComServerError {
-            err_code: 1,
-            err_desc: "Peak CAN Interface not supported!".into(),
+        // Err(ComServerError {
+        //     err_code: 1,
+        //     err_desc: "Peak CAN Interface not supported!".into(),
+        // })
+        let mut msg =  self.read_can_packets(timeout_ms, max_msgs);
+        msg.map(|can_frames| {
+            can_frames
+                .into_iter()
+                .map(|can_frame| ISO15765Data {
+                    id: can_frame.id,
+                    data: can_frame.data.to_vec(), // Convert the array to a Vec<u8>
+                    pad_frame: false, // Adjust as needed
+                    ext_addressing: false, // Adjust as needed
+                })
+                .collect()
         })
     }
 
@@ -236,17 +266,21 @@ impl ComServer for PeakCanAPI
         is_ext_can: bool,
         ext_addressing: bool,
     ) -> Result<(), ComServerError> {
-        Err(ComServerError {
-            err_code: 1,
-            err_desc: "Peak CAN Interface not supported!".into(),
-        })
+        // Err(ComServerError {
+        //     err_code: 1,
+        //     err_desc: "Peak CAN Interface not supported!".into(),
+        // })
+
+        return self.open_can_interface(bus_speed, is_ext_can);
     }
 
     fn close_iso15765_interface(&mut self) -> Result<(), ComServerError> {
-        Err(ComServerError {
-            err_code: 1,
-            err_desc: "Peak CAN Interface not supported!".into(),
-        })
+        // Err(ComServerError {
+        //     err_code: 1,
+        //     err_desc: "Peak CAN Interface not supported!".into(),
+        // })
+
+        return self.close_can_interface();
     }
 
     fn add_can_filter(&mut self, f: FilterType) -> Result<u32, ComServerError> {
@@ -310,7 +344,7 @@ impl ComServer for PeakCanAPI
             j1850vpw: Capability::NA,
             j1850pwm: Capability::NA,
             can: Capability::Yes,
-            iso15765: Capability::NA,
+            iso15765: Capability::Yes,
             iso9141: Capability::NA,
             iso14230: Capability::NA,
             ip: Capability::NA,

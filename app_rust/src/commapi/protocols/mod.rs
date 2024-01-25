@@ -288,8 +288,10 @@ pub trait ProtocolServer: Sized {
                     Err(e) => return Err(ProtocolError::CommError(e)),
                 }
             }
-            if res.data[0] == 0x7F {
+            if res.data[1] == 0x7F {
                 // Still error :(
+                println!("Server response: negative code - {}", res.data[1]);
+
                 Err(ProtocolError::ProtocolError(Box::new(
                     Self::Error::from_byte(res.data[2]),
                 )))
