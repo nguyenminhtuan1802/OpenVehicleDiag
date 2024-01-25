@@ -58,11 +58,20 @@ unsafe impl Sync for CanFrame {}
 
 impl std::fmt::Display for CanFrame {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Format the CanFrame as a string
         write!(
             f,
-            "ID: 0x{:04X} Data: {:02X?}",
+            "ID: {:#X}, DLC: {}, Data: {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X}",
             self.id,
-            &self.data[0..self.dlc as usize]
+            self.dlc,
+            self.data[0],
+            self.data[1],
+            self.data[2],
+            self.data[3],
+            self.data[4],
+            self.data[5],
+            self.data[6],
+            self.data[7]
         )
     }
 }

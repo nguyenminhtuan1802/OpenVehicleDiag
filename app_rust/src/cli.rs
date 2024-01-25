@@ -10,6 +10,7 @@ use crate::{
     commapi::{comm_api::ISO15765Config, protocols::DiagCfg},
     commapi::peak_can_api::PeakCanAPI,
     commapi::iface,
+    commapi::comm_api::CanFrame,
   };
 
 // CLI parser
@@ -96,9 +97,10 @@ fn start_uds(sid: Vec<u8>, did: Vec<u8>) {
     let mut dev = PeakCanAPI::new(String::from("PeakCan"));
 
     if let Err(e) = dev.open_device() {
-        panic!("CAN Init: Fail {:?}", e);
+        println!("CAN Init: Fail {:?}", e);
+        return;
     } else {
-        println!("CAN Init: Success")
+        println!("CAN Init: Success");
     }
 
     //Start ISO-TP UDS session with IC
@@ -125,11 +127,46 @@ fn start_uds(sid: Vec<u8>, did: Vec<u8>) {
     );
 }
 
+fn start_can_tracer() {
+    let mut dev = PeakCanAPI::new(String::from("PeakCan"));
+
+    if let Err(e) = dev.open_device() {
+        println!("CAN Init: Fail {:?}", e);
+        return;
+    } else {
+        println!("CAN Init: Success");
+    }
+
+    if let Err(e) = dev.open_can_interface(0x001C, false) {
+        println!("CAN Setup: Fail {:?}", e);
+        return;
+    } else {
+        println!("CAN Setup: Success");
+    }
+
+    while true {
+        match dev.read_can_packets(2000, 1) {
+            Ok(can_frames) => {
+                for can_frame in can_frames {
+                    println!("{}", can_frame); // Print each CanFrame
+                }
+            }
+            Err(e) => {
+                //println!("CAN Read: Fail {:?}", e);
+                std::thread::sleep(std::time::Duration::from_millis(1000));
+
+            //return;
+            }
+        }
+    }
+}
+
 fn main() {
     let args = Args::parse();
 
     if (args.mode == "CANTRACER") {
         // Start can tracer
+        start_can_tracer();
     } else if (args.mode == "UDS") {
         // Parse SID
         match args.SID {

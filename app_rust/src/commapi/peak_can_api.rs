@@ -156,7 +156,7 @@ impl ComServer for PeakCanAPI
                 let status = unsafe { CAN_Read(socket.handle, &mut can_data, &mut time_stamp)};
                 if (status != 0) {
                     return Err(ComServerError {
-                        err_code: 3,
+                        err_code: status,
                         err_desc: "PeakCAN read error".into(),
                     });
                 } else {
