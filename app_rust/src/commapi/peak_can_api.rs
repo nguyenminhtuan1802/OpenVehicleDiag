@@ -60,6 +60,7 @@ impl TPCANTimestamp {
     fn new(millis: u32, millis_overflow: u16, micros: u16) -> Self { TPCANTimestamp{millis, millis_overflow, micros}}
 }
 
+#[cfg(target_os = "windows")]
 #[link(name = "PCANBasic")]
 extern {
     fn CAN_Initialize(Channel: u16, Btr0Btr1: u16, HwType: u8, IOPort: u32, Interrupt: u16) -> u32;
@@ -73,6 +74,7 @@ struct PeakCANSocket {
     baudRate: u16,
 }
 
+#[cfg(target_os = "windows")]
 impl PeakCANSocket {
     fn new(handle: u16, baudRate: u16) -> Self { PeakCANSocket{handle, baudRate} }
 }
@@ -92,6 +94,7 @@ impl std::fmt::Debug for PeakCanAPI {
     }
 }
 
+#[cfg(target_os = "windows")]
 impl PeakCanAPI {
     pub fn new(iface: String) -> Self {
         PeakCanAPI { iface,
@@ -100,6 +103,7 @@ impl PeakCanAPI {
     }
 }
 
+#[cfg(target_os = "windows")]
 #[allow(unused_variables)]
 impl ComServer for PeakCanAPI 
 {
