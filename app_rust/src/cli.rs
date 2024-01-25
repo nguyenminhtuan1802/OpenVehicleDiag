@@ -9,6 +9,7 @@ use crate::{
     commapi::{comm_api::ComServer, protocols::uds::UDSECU},
     commapi::{comm_api::ISO15765Config, protocols::DiagCfg},
     commapi::peak_can_api::PeakCanAPI,
+    commapi::socket_can_api::SocketCanAPI,
     commapi::iface,
     commapi::comm_api::CanFrame,
   };
@@ -90,7 +91,7 @@ fn print_error(r#type: u8, value: &String) {
     println!();
 }  
 
-#[cfg(target_os = "windows")]
+//#[cfg(target_os = "windows")]
 fn start_uds(sid: Vec<u8>, did: Vec<u8>) {
 
     //println!("sid: {:?} did: {:?}", sid, did);
@@ -128,80 +129,7 @@ fn start_uds(sid: Vec<u8>, did: Vec<u8>) {
     );
 }
 
-#[cfg(target_os = "windows")]
-fn start_can_tracer() {
-    let mut dev = PeakCanAPI::new(String::from("PeakCan"));
-
-    if let Err(e) = dev.open_device() {
-        println!("CAN Init: Fail {:?}", e);
-        return;
-    } else {
-        println!("CAN Init: Success");
-    }
-
-    if let Err(e) = dev.open_can_interface(0x001C, false) {
-        println!("CAN Setup: Fail {:?}", e);
-        return;
-    } else {
-        println!("CAN Setup: Success");
-    }
-
-    while true {
-        match dev.read_can_packets(2000, 1) {
-            Ok(can_frames) => {
-                for can_frame in can_frames {
-                    println!("{}", can_frame); // Print each CanFrame
-                }
-            }
-            Err(e) => {
-                //println!("CAN Read: Fail {:?}", e);
-                std::thread::sleep(std::time::Duration::from_millis(1000));
-
-            //return;
-            }
-        }
-    }
-}
-
-#[cfg(target_os = "linux")]
-fn start_uds(sid: Vec<u8>, did: Vec<u8>) {
-
-    //println!("sid: {:?} did: {:?}", sid, did);
-
-    let mut dev = PeakCanAPI::new(String::from("PeakCan"));
-
-    if let Err(e) = dev.open_device() {
-        println!("CAN Init: Fail {:?}", e);
-        return;
-    } else {
-        println!("CAN Init: Success");
-    }
-
-    //Start ISO-TP UDS session with IC
-    UDSECU::start_client_and_send_one_request(
-        &dev.clone_box(),
-        iface::InterfaceType::IsoTp,
-        iface::InterfaceConfig::from_iso15765(ISO15765Config {
-            baud: 0x001C,
-            send_id: 0x784,
-            recv_id: 0x7F0,
-            block_size: 8,
-            sep_time: 20,
-            use_ext_isotp: false,
-            use_ext_can: false,
-        }),
-        None,
-        DiagCfg { // Not used
-            send_id: 0,
-            recv_id: 0,
-            global_id: None,
-        },
-        &sid,
-        &did,
-    );
-}
-
-#[cfg(target_os = "linux")]
+//#[cfg(target_os = "windows")]
 fn start_can_tracer() {
     let mut dev = PeakCanAPI::new(String::from("PeakCan"));
 
@@ -248,6 +176,7 @@ fn main() {
             Some(service) => {
                 if !is_hex(&service) {
                     print_error(1, &service);
+                    return;
                 }
 
                 // Parse DID
@@ -256,6 +185,7 @@ fn main() {
                     Some(data) => {
                         if !is_hex(&data) {
                             print_error(2, &data);
+                            return;
                         }
                         did = data;
                     }
@@ -267,6 +197,7 @@ fn main() {
             }
             None => {
                 print_error(1, &String::from(""));
+                return;
             }
         }
     }

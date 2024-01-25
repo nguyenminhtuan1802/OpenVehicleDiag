@@ -77,7 +77,7 @@ impl SocketCanAPI {
             sockcan_iface: Arc::new(RwLock::new(None)),
             isotp_iface: Arc::new(RwLock::new(None)),
             can_filters: [None; 10],
-            isotp_in_use: false,
+            isotp_in_use: true,
             req_iso_tp_settings: (0, false, false),
         }
     }

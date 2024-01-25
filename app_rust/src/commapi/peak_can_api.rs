@@ -68,13 +68,20 @@ extern {
     fn CAN_Write(Channel: u16, MessageBuffer: *mut TPCANMsg) -> u32;
 }
 
+#[cfg(target_os = "linux")]
+#[link(name = "pcanbasic")]
+extern {
+    fn CAN_Initialize(Channel: u16, Btr0Btr1: u16, HwType: u8, IOPort: u32, Interrupt: u16) -> u32;
+    fn CAN_Read(Channel: u16, MessageBuffer: *mut TPCANMsg, TimestampBuffer: *mut TPCANTimestamp) -> u32;
+    fn CAN_Write(Channel: u16, MessageBuffer: *mut TPCANMsg) -> u32;
+}
+
 #[derive(Clone, Copy)]
 struct PeakCANSocket {
     handle: u16,
     baudRate: u16,
 }
 
-#[cfg(target_os = "windows")]
 impl PeakCANSocket {
     fn new(handle: u16, baudRate: u16) -> Self { PeakCANSocket{handle, baudRate} }
 }
@@ -94,7 +101,6 @@ impl std::fmt::Debug for PeakCanAPI {
     }
 }
 
-#[cfg(target_os = "windows")]
 impl PeakCanAPI {
     pub fn new(iface: String) -> Self {
         PeakCanAPI { iface,
@@ -103,7 +109,6 @@ impl PeakCanAPI {
     }
 }
 
-#[cfg(target_os = "windows")]
 #[allow(unused_variables)]
 impl ComServer for PeakCanAPI 
 {
@@ -246,11 +251,12 @@ impl ComServer for PeakCanAPI
         let status = unsafe { CAN_Initialize(pcan_socket.handle, bus_speed as u16, 0, 0, 0)};
         if (status != 0) {
             return Err(ComServerError {
-                err_code: 3,
+                err_code: status,
                 err_desc: "PeakCAN read error".into(),
             });
         }
 
+        println!("PCAN Init success");
         Ok(())
     }
 
