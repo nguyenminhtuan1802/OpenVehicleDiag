@@ -21,3 +21,6 @@
 .DS_Store
 *.dll
 *.lib
+*.json
+*.log
+*.so
