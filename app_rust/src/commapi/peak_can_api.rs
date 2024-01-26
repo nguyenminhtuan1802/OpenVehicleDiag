@@ -256,7 +256,7 @@ impl ComServer for PeakCanAPI
             });
         }
 
-        println!("PCAN Init success");
+        //println!("PCAN Init success");
         Ok(())
     }
 

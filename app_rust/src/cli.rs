@@ -9,7 +9,6 @@ use crate::{
     commapi::{comm_api::ComServer, protocols::uds::UDSECU},
     commapi::{comm_api::ISO15765Config, protocols::DiagCfg},
     commapi::peak_can_api::PeakCanAPI,
-    commapi::socket_can_api::SocketCanAPI,
     commapi::iface,
     commapi::comm_api::CanFrame,
   };
